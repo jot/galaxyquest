@@ -1,6 +1,8 @@
 from flask import Flask
 from flask import request
 import json
+from random import random
+from scipy.stats import poisson
 
 app = Flask(__name__)
 
@@ -32,47 +34,101 @@ def cube(xpos,ypos,zpos,dx,dy,dz,data):
 
     return 1, np.array(xyzsort)
 
+def histogramGen(dx,dy,dz,cutoff,data):
+	
+	ii = 0
+	
+	success_tot = 0
+	count_tot = 0
+
+	box_data = []
+	
+	while ii < cutoff:
+	
+		success, box = cube(random(),random(),random(),dx,dy,dz,data)
+		count = np.size(box)/3
+	
+		success_tot += success
+		count_tot += count
+	
+		if success == 1:
+			box_data.append(count)
+	
+		ii += 1
+	
+	#histogram of galaxy density
+	hist, bin = np.histogram(box_data,bins=cutoff/5,range=(0,np.max(box_data)))
+	
+	#poisson distribution
+	mu = np.mean(box_data)
+	pois = np.random.poisson(mu,cutoff*10)
+	
+	#might want to swap out box_data for hist? not sure depends on how
+	#you're plotting it
+	return box_data, hist, pois, bin
+
 #data holds all position data as tuples [[x,y,z], ...]
 
 @app.route("/")
 
 def hello():
-  if request.args.get('xpos', ''):
-    xpos = float(request.args.get('xpos', ''))
-    ypos = float(request.args.get('ypos', ''))
-    zpos = float(request.args.get('zpos', ''))
+    if request.args.get('xpos', ''):
+        xpos = float(request.args.get('xpos', ''))
+        ypos = float(request.args.get('ypos', ''))
+        zpos = float(request.args.get('zpos', ''))
 
-    dx = float(request.args.get('dx', ''))
-    dy = float(request.args.get('dy', ''))
-    dz = float(request.args.get('dz', ''))
+        dx = float(request.args.get('dx', ''))
+        dy = float(request.args.get('dy', ''))
+        dz = float(request.args.get('dz', ''))
 
-    print xpos
-    print ypos
-    print zpos
-    print dx
-    print dy
-    print dz
+        print xpos
+        print ypos
+        print zpos
+        print dx
+        print dy
+        print dz
 
-    xpos_data = np.load('data/x.npy')
-    ypos_data = np.load('data/y.npy')
-    zpos_data = np.load('data/z.npy')
+        xpos_data = np.load('data/x.npy')
+        ypos_data = np.load('data/y.npy')
+        zpos_data = np.load('data/z.npy')
 
-    # mass = np.load('data/stellar_masses.npy')
-    # SFR = np.load('data/SFRs.npy')
+        # mass = np.load('data/stellar_masses.npy')
+        # SFR = np.load('data/SFRs.npy')
 
-    #normalise data
-    xpos_data = xpos_data/400000
-    ypos_data = ypos_data/400000
-    zpos_data = zpos_data/400000
+        #normalise data
+        xpos_data = xpos_data/400000
+        ypos_data = ypos_data/400000
+        zpos_data = zpos_data/400000
 
-    rpos = zip(xpos_data,ypos_data,zpos_data) 
+        rpos = zip(xpos_data,ypos_data,zpos_data) 
 
-    success,data = cube(xpos,ypos,zpos,dx,dy,dz,rpos)
-    return json.dumps(data.tolist())
-    # return "<h1>GalaxyQuest Result</h1>"
+        success,data = cube(xpos,ypos,zpos,dx,dy,dz,rpos)
+        return json.dumps(data.tolist())
+        # return "<h1>GalaxyQuest Result</h1>"
 
-  else:
-    return "<h1>Welcome to GalaxyQuest</h1> <h3>Use:<h3><ul><li>http://galaxyquest.herokuapp.com?xpos=0&ypos=0&zpos=0&dx=0.1&dy=0.1&dz=0.1</li></ul>"    
+    elif request.args.get('dx', ''):
+        dx = float(request.args.get('dx', ''))
+        dy = float(request.args.get('dy', ''))
+        dz = float(request.args.get('dz', ''))
+
+        xpos_data = np.load('data/x.npy')
+        ypos_data = np.load('data/y.npy')
+        zpos_data = np.load('data/z.npy')
+
+        # mass = np.load('data/stellar_masses.npy')
+        # SFR = np.load('data/SFRs.npy')
+
+        #normalise data
+        xpos_data = xpos_data/400000
+        ypos_data = ypos_data/400000
+        zpos_data = zpos_data/400000
+        rpos = zip(xpos_data,ypos_data,zpos_data)
+
+        box_data, hist, pois, bin = histogramGen(dx,dy,dz,100,rpos)
+        return json.dumps([box_data,bin.tolist()])
+
+    else:
+        return "<h1>Welcome to GalaxyQuest</h1> <h3>Use:<h3><ul><li>http://galaxyquest.herokuapp.com?xpos=0&ypos=0&zpos=0&dx=0.1&dy=0.1&dz=0.1</li></ul>"    
 
 if __name__ == "__main__":
     app.run(debug=True)
