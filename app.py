@@ -2,7 +2,6 @@ from flask import Flask
 from flask import request
 import json
 from random import random
-from scipy.stats import poisson
 
 app = Flask(__name__)
 
@@ -61,11 +60,11 @@ def histogramGen(dx,dy,dz,cutoff,data):
 	
 	#poisson distribution
 	mu = np.mean(box_data)
-	pois = np.random.poisson(mu,cutoff*10)
+	#pois = np.random.poisson(mu,cutoff*10)
 	
 	#might want to swap out box_data for hist? not sure depends on how
 	#you're plotting it
-	return box_data, hist, pois, bin
+	return box_data, hist, bin
 
 #data holds all position data as tuples [[x,y,z], ...]
 
@@ -124,8 +123,8 @@ def hello():
         zpos_data = zpos_data/400000
         rpos = zip(xpos_data,ypos_data,zpos_data)
 
-        box_data, hist, pois, bin = histogramGen(dx,dy,dz,100,rpos)
-        return json.dumps([box_data,bin.tolist()])
+        box_data, hist, bin = histogramGen(dx,dy,dz,100,rpos)
+        return json.dumps([hist.tolist(),bin.tolist()])
 
     else:
         return "<h1>Welcome to GalaxyQuest</h1> <h3>Use:<h3><ul><li>http://galaxyquest.herokuapp.com?xpos=0&ypos=0&zpos=0&dx=0.1&dy=0.1&dz=0.1</li></ul>"    
