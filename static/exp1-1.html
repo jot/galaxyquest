@@ -1,0 +1,222 @@
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>example version 1.1</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #cccccc;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+
+				background-color: #050505;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+
+			a {
+				color: #0080ff;
+			}
+		</style>
+	</head>
+	<body>
+		<input type="file" id="files" name="filename"/>
+		<div id="progress_bar"><div class="percent">0%</div></div>
+		<output id="list"></output>
+
+		<div id="container"></div>
+
+		<script src="three.min.js"></script>
+		<script src="Detector.js"></script>
+		<script src="stats.min.js"></script>
+
+		<script>
+			// Check for the various File API support.
+			if (window.File && window.FileReader && window.FileList && window.Blob) {
+		  // Great success! All the File APIs are supported.
+			} else {
+			alert('The File APIs are not fully supported in this browser.');
+			}
+		</script>
+
+		<style>
+			#progress_bar {
+				margin: 10px 0;
+				padding: 3px;
+				border: 1px solid #FF0000;
+				font-size: 14px;
+				clear: both;
+				opacity: 0.4;
+				-moz-transition: opacity 1s linear;
+				-o-transition: opacity 1s linear;
+				-webkit-transition: opacity 1s linear;
+			}
+			#progress_bar.loading {
+				opacity: 1.0;
+			}
+			#progress_bar.percent {
+				background-color: #FF0000;
+				height: auto;
+				width: 0;
+			}
+		</style>
+
+
+		<script>
+			var reader;
+			var progress = document.querySelector('.percent');
+			var cols;
+			var total_count=0;
+
+			function errorHandler(evt) {
+				switch(evt.target.error.code) {
+					case evt.target.error.NOT_FOUND_ERR:
+						alert('File Not Found!');
+						break;
+					case evt.target.error.NOT_READABLE_ERR:
+						alert('File is not readable');
+						break;
+					case evt.target.error.ABORT_ERR:
+						break; // noop
+					default:
+						alert('An error occurred reading this file.');
+				};
+			}
+
+			function updateProgress(evt) {
+				// evt is an ProgressEvent.
+				if (evt.lengthComputable) {
+					var percentLoaded = Math.round((evt.loaded / evt.total) * 100);
+					// Increase the progress bar length.
+					if (percentLoaded < 100) {
+						progress.style.width = percentLoaded + '%';
+						progress.textContent = percentLoaded + '%';
+					}
+				}
+			}
+
+			function handleFileSelect(evt) {
+				var target_file;
+				// Reset progress indicator on new file selection.
+				progress.style.width = '0%';
+				progress.textContent = '0%';
+
+				reader = new FileReader();
+				reader.onerror = errorHandler;
+				reader.onprogress = updateProgress;
+				reader.onloadstart = function(e) {
+					document.getElementById('progress_bar').className = 'loading';
+				};
+				reader.onload = function(e) {
+					// Ensure that the progress bar displays 100% at the end.
+					progress.style.width = '100%';
+					progress.textContent = '100%';
+					setTimeout("document.getElementById('progress_bar').className='';", 20000);
+				}
+				target_file=evt.target.files[0];
+		    reader.onload = parse;
+				reader.readAsText(target_file);
+		    function parse()
+   		  {
+      	  var row = reader.result.split('\n');
+       	  for (var i in row)
+     	    {
+    	      cols = row[i].split(',');
+						total_count = total_count + 1;
+						console.log(cols,total_count);
+     	    }
+  		  }
+			}
+			document.getElementById('files').addEventListener('change', handleFileSelect, false);
+
+		</script>
+
+
+
+		<script>
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+			var container, stats;
+			var camera, scene, renderer;
+			var mesh;
+			init();
+			animate();
+			function init() {
+				container = document.getElementById( 'container' );
+				camera = new THREE.PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 5, 3500 );
+				camera.position.z = 2750;
+				scene = new THREE.Scene();
+				scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
+				var particles = 500000;
+				var geometry = new THREE.BufferGeometry();
+				var positions = new Float32Array( particles * 3 );
+				var colors = new Float32Array( particles * 3 );
+				var color = new THREE.Color();
+				var n = 1000, n2 = n / 2; // particles spread in the cube
+				for ( var i = 0; i < positions.length; i += 3 ) {
+					// positions
+					var x = Math.random() * n - n2;
+					var y = Math.random() * n - n2;
+					var z = Math.random() * n - n2;
+					positions[ i ]     = x;
+					positions[ i + 1 ] = y;
+					positions[ i + 2 ] = z;
+					// colors
+					var vx = ( x / n ) + 0.5;
+					var vy = ( y / n ) + 0.5;
+					var vz = ( z / n ) + 0.5;
+					color.setRGB( vx, vy, vz );
+					colors[ i ]     = color.r;
+					colors[ i + 1 ] = color.g;
+					colors[ i + 2 ] = color.b;
+				}
+				geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+				geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
+				geometry.computeBoundingSphere();
+				//
+				var material = new THREE.PointsMaterial( { size: 15, vertexColors: THREE.VertexColors } );
+				particleSystem = new THREE.Points( geometry, material );
+				scene.add( particleSystem );
+				//
+				renderer = new THREE.WebGLRenderer( { antialias: false } );
+				renderer.setClearColor( scene.fog.color );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+				//
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				container.appendChild( stats.domElement );
+				//
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+			//
+			function animate() {
+				requestAnimationFrame( animate );
+				render();
+				stats.update();
+			}
+			function render() {
+				var time = Date.now() * 0.001;
+				//particleSystem.rotation.x = time * 0.25;
+				//particleSystem.rotation.y = time * 0.5;
+				renderer.render( scene, camera );
+			}
+		</script>
+	</body>
+</html>
+

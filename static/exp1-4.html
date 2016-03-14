@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>example version 1.4</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #cccccc;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+
+				background-color: #050505;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+			a {
+				color: #0080ff;
+			}
+		</style>
+	</head>
+	<body>
+		<input type="file" id="file-input" />
+		<div id="container"></div>
+
+		<script src="three.min.js"></script>
+		<script src="Detector.js"></script>
+		<script src="stats.min.js"></script>
+		<script src="OrbitControls.js"></script>
+
+		<script>
+			// Check for the various File API support.
+			if (window.File && window.FileReader && window.FileList && window.Blob) {
+		  // Great success! All the File APIs are supported.
+			} else {
+			alert('The File APIs are not fully supported in this browser.');
+			}
+		</script>
+
+		<script>
+			var total_cols = new Float32Array( 150000 * 3 );
+			var colors = new Float32Array( 150000 * 3 );
+			var total_count=0;
+			var single_count=0;
+			var container = document.getElementById( 'container' );
+			var camera = new THREE.PerspectiveCamera(27,window.innerWidth/window.innerHeight,5,4000000 );
+			camera.position.x = 200000;
+			camera.position.y = 200000;
+			var scene = new THREE.Scene();
+			var geometry = new THREE.BufferGeometry();
+			var color = new THREE.Color();
+			var PARTICLE_SIZE = 3000;
+			var material = new THREE.PointsMaterial( { size: PARTICLE_SIZE, vertexColors: THREE.VertexColors } );
+			scene.fog = new THREE.Fog( 0x050505, 800000, 1500000 );
+			var switch_par = 0;
+			var particleSystem = new THREE.Points( geometry, material );
+			var renderer = new THREE.WebGLRenderer( { antialias: false } );
+			var stats = new Stats();
+			var cameraControls;
+			camera.position.z = 1200000;
+			var mouse = new THREE.Vector2(), INTERSECTED;
+			raycaster = new THREE.Raycaster();
+
+			document.getElementById('file-input').addEventListener('change', readSingleFile, false);
+			document.getElementById('file-input').addEventListener('change', lotspoints, false);
+			document.body.addEventListener( 'mousewheel', mousewheel, false );
+			document.body.addEventListener( 'DOMMouseScroll', mousewheel, false ); // firefox
+			document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+			function readSingleFile(e) {
+				var file = e.target.files[0];
+				if (!file) {
+					return;
+				}
+				var reader = new FileReader();
+				reader.onload = function(e) {
+					var contents = e.target.result.split('\n');
+					var color = new THREE.Color();
+       	  for (var i in contents) {
+    	      var cols = contents[i].split(',');
+						if(isNaN(cols[0])==false&&isNaN(cols[1])==false&&isNaN(cols[2])==false&&single_count<150000){
+							total_cols[total_count]   = cols[0];
+							total_cols[total_count+1] = cols[1];
+							total_cols[total_count+2] = cols[2];
+							var vx = ((Math.random()*400000 - 0)/400000);
+							var vy = ((Math.random()*400000 - 0)/400000);
+							var vz = ((Math.random()*400000 - 0)/400000);
+							color.setRGB(vx,vy,vz);
+							colors[total_count]   = color.r;
+							colors[total_count+1] = color.g;
+							colors[total_count+2] = color.b;
+						}
+						//total_cols[total_count+3] = cols[3];
+						//total_cols[total_count+4] = cols[4];
+						total_count = total_count + 3;
+						single_count = single_count + 1;
+     	    }
+					switch_par = 1;
+					lotspoints();
+  		  }
+				reader.readAsText(file);
+			}
+			function lotspoints() {
+				if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+				var mesh;
+				if(switch_par==1) {
+					var particles=single_count;
+					geometry.addAttribute( 'position', new THREE.BufferAttribute( total_cols, 3 ) );
+					geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
+					geometry.computeBoundingSphere();
+					scene.add( particleSystem );
+
+					//addLights();
+
+					cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+					cameraControls.target.set( 200000, 200000, 0);
+					cameraControls.maxDistance = 3000000;
+					cameraControls.minDistance = 100000;
+					cameraControls.update();
+
+					var container = document.getElementById( 'container' );
+					container.appendChild( renderer.domElement );
+
+					renderer.setClearColor( scene.fog.color );
+					renderer.setPixelRatio( window.devicePixelRatio );
+					renderer.setSize( window.innerWidth, window.innerHeight );
+					container.appendChild( renderer.domElement );
+					stats.domElement.style.position = 'absolute';
+					stats.domElement.style.top = '0px';
+					container.appendChild( stats.domElement );
+					window.addEventListener( 'resize', onWindowResize, false );
+					animate();
+				}
+			}
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+			function animate() {
+				requestAnimationFrame( animate );
+				cameraControls.update();
+				render();
+				stats.update();
+			}
+			function render() {
+				var time = Date.now() * 0.0001;
+				raycaster.setFromCamera( mouse, camera );
+
+				//particleSystem.rotation.x = time * 0.15;
+				//particleSystem.rotation.y = time * 0.15;
+				renderer.render( scene, camera );
+			}
+			function addLights() {
+				var bluePoint = new THREE.PointLight(0x0033ff, 3, 0);
+				bluePoint.position.set( 70, 5, 70 );
+				scene.add(bluePoint);
+				scene.add(new THREE.PointLightHelper(bluePoint, 3));
+  
+				var greenPoint = new THREE.PointLight(0x33ff00, 1, 0);
+				greenPoint.position.set( -70, 5, 70 );
+				scene.add(greenPoint);
+				scene.add(new THREE.PointLightHelper(greenPoint, 3));
+
+				var hemLight = new THREE.HemisphereLight(0xffe5bb, 0xFFBF00, .1);
+				scene.add(hemLight);
+			}
+			function mousewheel( e ) {
+		    var d = ((typeof e.wheelDelta != "undefined")?(-e.wheelDelta):e.detail);
+   			d = 50000 * ((d>0)?1:-1);
+
+		    var cPos = camera.position;
+   			if (isNaN(cPos.x) || isNaN(cPos.y) || isNaN(cPos.y))
+      	return;
+
+				var r = cPos.x*cPos.x + cPos.y*cPos.y;
+				var sqr = Math.sqrt(r);
+				var sqrZ = Math.sqrt(cPos.z*cPos.z + r);
+
+				//var nx = cPos.x + ((r==0)?0:(d * cPos.x/sqr));
+				//var ny = cPos.y + ((r==0)?0:(d * cPos.y/sqr));
+				nx = cPos.x;
+				ny = cPos.y;
+				var nz = cPos.z + ((r==0)?0:(d * cPos.z/sqrZ));
+
+				if (isNaN(nx) || isNaN(ny) || isNaN(nz))
+				return;
+
+				cPos.x = nx;
+				cPos.y = ny;
+				cPos.z = nz;
+			}
+			function onDocumentMouseMove( event ) {
+				event.preventDefault();
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+			}
+		</script>
+	</body>
+</html>
+
