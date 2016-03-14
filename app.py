@@ -128,7 +128,7 @@ def hello():
         return '<!doctype html><html><head><title>Bar Chart</title><script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script></head><body><h1>Galaxy Density</h1><p>'+json.dumps([hist.tolist(),bin.tolist()])+'</p><div style="width: 100%"><canvas id="canvas" height="450" width="1000"></canvas></div><script>var randomScalingFactor = function(){ return Math.round(Math.random()*100)};var barChartData = {labels : '+json.dumps(bin.tolist())+',datasets : [{fillColor : "rgba(220,220,220,0.5)",strokeColor : "rgba(220,220,220,0.8)",highlightFill: "rgba(220,220,220,0.75)",highlightStroke: "rgba(220,220,220,1)",data : '+json.dumps(hist.tolist())+'}]};window.onload = function(){var ctx = document.getElementById("canvas").getContext("2d");window.myBar = new Chart(ctx).Bar(barChartData, {responsive : true });}</script></body></html>'
 
     else:
-        return "<h1>Welcome to GalaxyQuest</h1> <h3>Use:<h3><ul><li>http://galaxyquest.herokuapp.com?xpos=0&ypos=0&zpos=0&dx=0.1&dy=0.1&dz=0.1</li></ul>"    
+        return '<h1>Welcome to GalaxyQuest</h1><p><form action="http://galaxyquest.herokuapp.com" method="GET"><label>dx</label><input type="text" name="dx" value="0.1" /><br /><label>dy</label><input type="text" name="dy" value="0.1" /><br /><label>dz</label><input type="text" name="dz" value="0.1" /><br /><input type="submit" value="Calculate" /></form></p><h3>Or use:<h3><ul><li>http://galaxyquest.herokuapp.com?xpos=0&ypos=0&zpos=0&dx=0.1&dy=0.1&dz=0.1</li></ul>'
 
 if __name__ == "__main__":
     app.run(debug=True)
